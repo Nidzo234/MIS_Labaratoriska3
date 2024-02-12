@@ -1,362 +1,386 @@
-//import 'dart:js_util';
-
 import 'package:flutter/material.dart';
+import 'package:firebase_core/firebase_core.dart';
+import 'firebase_options.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 
-void main() {
+void main() async {
+  WidgetsFlutterBinding.ensureInitialized();
+  await Firebase.initializeApp(options: DefaultFirebaseOptions.currentPlatform);
   runApp(const MyApp());
-}
-
-class Clothes {
-  String name;
-  String category;
-  String color;
-  Clothes({required this.name,required this.category, required this.color});
 }
 
 class MyApp extends StatelessWidget {
   const MyApp({super.key});
 
-  // This widget is the root of your application.
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
-      title: 'MIS lab 2',
-      theme: ThemeData(
-        colorScheme: ColorScheme.fromSeed(seedColor: Colors.deepPurple.shade50),
-        useMaterial3: true,
-      ),
-      home: const SubjectListScreen(),
+      initialRoute: '/',
+      routes: {
+        '/': (context) => const MainListScreen(),
+        '/login': (context) => const AuthScreen(isLogin: true),
+        '/register': (context) => const AuthScreen(isLogin: false),
+      },
     );
   }
 }
 
-class SubjectListScreen extends StatefulWidget {
-  const SubjectListScreen({super.key});
-  @override
-  State<SubjectListScreen> createState() => _SubjectListScreenState();
+class Exam{
+  String course;
+  String description;
+  DateTime timestamp;
+
+  Exam({
+    required this.course,
+    required this.timestamp,
+    required this.description,
+  });
 }
 
-class _SubjectListScreenState extends State<SubjectListScreen> {
-  String ddType = 'Jeans';
-  String ddColor = 'Red';
-  final List<Clothes> _itemsList = [
-    Clothes(name: 'Shirt', category: 'Shirt', color: 'Blue'),
-    Clothes(name: 'Jeans', category: 'Jeans', color: 'Black'),
-    Clothes(name: 'Dress', category: 'Dress', color: 'Green'),
-    Clothes(name: 'Jacket', category: 'Jacket', color: 'Black')
+
+class ExamWidget extends StatefulWidget {
+  final Function(Exam) addExam;
+
+  const ExamWidget({required this.addExam, super.key});
+
+  @override
+  ExamWidgetState createState() => ExamWidgetState();
+}
+
+class ExamWidgetState extends State<ExamWidget> {
+  final TextEditingController subjectController = TextEditingController();
+  final TextEditingController descriptionController = TextEditingController();
+  DateTime selectedDate = DateTime.now();
+  TimeOfDay selectedTime = TimeOfDay.now();
+
+  Future<void> _selectDate(BuildContext context) async {
+    final DateTime? datePicked = await showDatePicker(
+      context: context,
+      initialDate: selectedDate,
+      firstDate: DateTime(2024),
+      lastDate: DateTime(2025),
+    );
+
+    if (datePicked != null && datePicked != selectedDate) {
+      setState(() {
+        selectedDate = datePicked;
+      });
+    }
+  }
+
+  void _selectTime(BuildContext context) async {
+    final TimeOfDay? timePicked = await showTimePicker(
+      context: context,
+      initialTime: TimeOfDay.fromDateTime(selectedDate),
+    );
+
+    if (timePicked != null && timePicked != selectedTime) {
+      setState(() {
+        selectedDate = DateTime(
+          selectedDate.year,
+          selectedDate.month,
+          selectedDate.day,
+          timePicked.hour,
+          timePicked.minute,
+        );
+      });
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      color: Colors.white30,
+      child: Padding(
+        padding: const EdgeInsets.fromLTRB(16, 0, 16, 0),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            TextField(
+              controller: subjectController,
+              decoration: const InputDecoration(labelText: 'Предмет'),
+            ),
+            TextField(
+              controller: descriptionController,
+              decoration: const InputDecoration(labelText: 'Забелешки'),
+            ),
+            const SizedBox(height: 20),
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Text(
+                    'Date: ${selectedDate.toLocal().toString().split(' ')[0]}'),
+                ElevatedButton(
+                  child: const Text('Селектирај датум'),
+                  onPressed: () => _selectDate(context),
+                ),
+              ],
+            ),
+            const SizedBox(height: 20),
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Text(
+                    'Time: ${selectedDate.toLocal().toString().split(' ')[1].substring(0, 5)}'),
+                ElevatedButton(
+                  onPressed: () => _selectTime(context),
+                  child: const Text('Време'),
+                ),
+              ],
+            ),
+            const SizedBox(height: 32),
+            ElevatedButton(
+              onPressed: () {
+                Exam exam = Exam(
+                  course: subjectController.text,
+                  timestamp: selectedDate,
+                  description: descriptionController.text,
+                );
+                widget.addExam(exam);
+                Navigator.pop(context);
+              },
+              child: const Text('Додади'),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+
+class MainListScreen extends StatefulWidget {
+  const MainListScreen({super.key});
+
+  @override
+  MainListScreenState createState() => MainListScreenState();
+}
+
+class MainListScreenState extends State<MainListScreen> {
+  final List<Exam> exams = [
+    Exam(course: 'VNP', timestamp: DateTime(2024, 1, 8), description: 'Да ги повторам последните предавања'),
+    Exam(course: 'IPNKS', timestamp: DateTime(2024, 1, 9), description: 'Да изгледам ауд4 и ауд5'),
+    Exam(course: 'MIS', timestamp: DateTime(2024, 1, 11), description: 'Лабараториска вежба на 12ти'),
+    Exam(course: 'MPIP', timestamp: DateTime(2024, 1, 22), description: 'Консултации во петок')
   ];
 
-  void addNewItem() {
-    showDialog(
-        context: context,
-        builder: (BuildContext context) {
-          String name = "";
-          String category = "";
-          String color = "";
-          return AlertDialog(
-            surfaceTintColor: Colors.white,
-            title: const Text(
-              "Add new Item",
-              style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
-            ),
-            content: Column(
-              children: [
-                TextField(
-                  onChanged: (value) {
-                    name = value;
-                  },
-                  decoration: const InputDecoration(
-                    labelStyle: TextStyle(color: Colors.blue),
-                    labelText: 'Name',
-                  ),
-                ),
-                DropdownButtonFormField<String>(
-                  value: ddType,
-                  onChanged: (value) {
-                    setState(() {
-                      category = value!;
-                    });
-                  },
-                  items: ['Shirt', 'Jeans', 'Dress', 'Jacket']
-                      .map<DropdownMenuItem<String>>((String t) {
-                    return DropdownMenuItem<String>(
-                      value: t,
-                      child: Text(t),
-                    );
-                  }).toList(),
-                  decoration: const InputDecoration(
-                      labelText: 'Select Category',
-                      labelStyle: TextStyle(color: Colors.blue)),
-                ),
-                DropdownButtonFormField<String>(
-                  value: ddColor,
-                  onChanged: (value) {
-                    setState(() {
-                      color = value!;
-                    });
-                  },
-                  items: ['Red', 'Blue', 'Green', 'Yellow', 'Black', 'White']
-                      .map<DropdownMenuItem<String>>((String col) {
-                    return DropdownMenuItem<String>(
-                      value: col,
-                      child: Text(col),
-                    );
-                  }).toList(),
-                  decoration: const InputDecoration(
-                      labelText: 'Select Color',
-                      labelStyle: TextStyle(color: Colors.blue)),
-                )
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      appBar: AppBar(
+        title: const Text('201163 exam list'),
+        actions: [
+          IconButton(
+            icon: const Icon(Icons.add),
+            onPressed: () => FirebaseAuth.instance.currentUser != null
+                ? _addExamFunction(context)
+                : _navigateToSignInPage(context),
+          ),
+          IconButton(
+            icon: const Icon(Icons.login),
+            onPressed: _signOut,
+          ),
+        ],
+      ),
+      body: GridView.builder(
+        gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+          crossAxisCount: 2,
+          crossAxisSpacing: 8.0,
+          mainAxisSpacing: 8.0,
+        ),
+        itemCount: exams.length,
+        itemBuilder: (context, index) {
+          final course = exams[index].course;
+          final description = exams[index].course;
+          final timestamp = exams[index].timestamp;
 
-              ],
-            )
-            ,
-            actions: [
-              ElevatedButton(
-                onPressed: () {
-                  Navigator.pop(context);
-                },
-                style: ButtonStyle(
-                  backgroundColor: MaterialStateProperty.all<Color>(
-                      Colors.green),
-                ),
-                child: const Text(
-                  "Cancel",
-                  style: TextStyle(
-                      fontWeight: FontWeight.bold,
-                      color: Colors.red
+          return Card(
+            child: Padding(
+              padding: const EdgeInsets.all(9.5),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    course,
+                    style: const TextStyle(fontWeight: FontWeight.bold),
                   ),
-                ),
+                  Text(
+                    description ,
+                    style: const TextStyle(fontWeight: FontWeight.normal, color: Colors.black45),
+                  ),
+
+                  const SizedBox(height: 9.0),
+                  Text(
+                    timestamp.toString(),
+                    style: const TextStyle(color: Colors.blue),
+                  ),
+                ],
               ),
-              ElevatedButton(
-                  onPressed: () {
-                    setState(() {
-                      if (name.isNotEmpty) {
-                        if (category.isEmpty) {
-                          category = ddType;
-                        }
-                        if (color.isEmpty) {
-                          color = ddColor;
-                        }
-                        Clothes c = Clothes(
-                            name: name, category: category, color: color);
-                        _itemsList.add(c);
-                      }
-                      Navigator.pop(context);
-                    });
-                  },
-                  style: ButtonStyle(
-                    backgroundColor:
-                    MaterialStateProperty.all<Color>(Colors.green),
-                  ),
-                  child: const Text(
-                    "Add",
-                    style: TextStyle(
-                        fontWeight: FontWeight.bold, color: Colors.red),
-                  ))
-            ],
+            ),
+          );
+        },
+      ),
+    );
+  }
+
+  Future<void> _signOut() async {
+    await FirebaseAuth.instance.signOut();
+  }
+
+  void _navigateToSignInPage(BuildContext context) {
+    Future.delayed(Duration.zero, () {
+      Navigator.pushReplacementNamed(context, '/login');
+    });
+  }
+
+  Future<void> _addExamFunction(BuildContext context) async {
+    return showModalBottomSheet(
+        context: context,
+        builder: (_) {
+          return GestureDetector(
+            onTap: () {},
+            behavior: HitTestBehavior.opaque,
+            child: ExamWidget(
+              addExam: _addExam,
+            ),
           );
         });
   }
 
+  void _addExam(Exam exam) {
+    setState(() {
+      exams.add(exam);
+    });
+  }
+}
 
-  void editItem(int index) {
+class AuthScreen extends StatefulWidget {
+  final bool isLogin;
+
+  const AuthScreen({super.key, required this.isLogin});
+
+  @override
+  AuthScreenState createState() => AuthScreenState();
+}
+
+class AuthScreenState extends State<AuthScreen> {
+  final FirebaseAuth _auth = FirebaseAuth.instance;
+  final TextEditingController _emailController = TextEditingController();
+  final TextEditingController _passwordController = TextEditingController();
+  final GlobalKey<ScaffoldMessengerState> _scaffoldKey =
+  GlobalKey<ScaffoldMessengerState>();
+
+  Future<void> _authAction() async {
+    try {
+      if (widget.isLogin) {
+        await _auth.signInWithEmailAndPassword(
+          email: _emailController.text,
+          password: _passwordController.text,
+        );
+        _showSuccessDialog(
+            "Login Successful", "You have successfully logged in!");
+        _navigateToHome();
+      } else {
+        await _auth.createUserWithEmailAndPassword(
+          email: _emailController.text,
+          password: _passwordController.text,
+        );
+        _showSuccessDialog(
+            "Registration Successful", "You have successfully registered!");
+        _navigateToLogin();
+      }
+    } catch (e) {
+      _showErrorDialog(
+          "Authentication Error", "Error during authentication: $e");
+    }
+  }
+
+  void _showSuccessDialog(String title, String message) {
+    _scaffoldKey.currentState?.showSnackBar(SnackBar(
+      content: Text(message),
+      duration: const Duration(seconds: 2),
+    ));
+  }
+
+  void _showErrorDialog(String title, String message) {
     showDialog(
-        context: context,
-        builder: (BuildContext context) {
-          String name = _itemsList[index].name;
-          TextEditingController nameController = TextEditingController(
-              text: name);
-          String category = _itemsList[index].category;
-          String color = _itemsList[index].color;
-          return AlertDialog(
-            surfaceTintColor: Colors.white,
-            title: const Text(
-              "Edit Item",
-              style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+      context: context,
+      builder: (BuildContext context) {
+        return AlertDialog(
+          title: Text(title),
+          content: Text(message),
+          actions: [
+            TextButton(
+              onPressed: () {
+                Navigator.pop(context);
+              },
+              child: const Text("OK"),
             ),
-            content: Column(
-              children: [
-                TextField(
-                  controller: nameController,
-                  onChanged: (value) {
-                    name = value;
-                  },
-                  decoration: const InputDecoration(
-                    labelStyle: TextStyle(color: Colors.blue),
-                    labelText: 'Edit name',
-                  ),
-                ),
-                DropdownButtonFormField<String>(
-                  value: category,
-                  onChanged: (value) {
-                    setState(() {
-                      category = value!;
-                    });
-                  },
-                  items: ['Shirt', 'Jeans', 'Dress', 'Jacket']
-                      .map<DropdownMenuItem<String>>((String t) {
-                    return DropdownMenuItem<String>(
-                      value: t,
-                      child: Text(t),
-                    );
-                  }).toList(),
-                  decoration: const InputDecoration(
-                      labelText: 'Edit Category',
-                      labelStyle: TextStyle(color: Colors.blue)),
-                ),
-                DropdownButtonFormField<String>(
-                  value: color,
-                  onChanged: (value) {
-                    setState(() {
-                      color = value!;
-                    });
-                  },
-                  items: ['Red', 'Blue', 'Green', 'Yellow', 'Black', 'White']
-                      .map<DropdownMenuItem<String>>((String col) {
-                    return DropdownMenuItem<String>(
-                      value: col,
-                      child: Text(col),
-                    );
-                  }).toList(),
-                  decoration: const InputDecoration(
-                      labelText: 'Edit Color',
-                      labelStyle: TextStyle(color: Colors.blue)),
-                )
+          ],
+        );
+      },
+    );
+  }
 
-              ],
-            )
-            ,
-            actions: [
-              ElevatedButton(
-                onPressed: () {
-                  Navigator.pop(context);
-                },
-                style: ButtonStyle(
-                  backgroundColor: MaterialStateProperty.all<Color>(
-                      Colors.green),
-                ),
-                child: const Text(
-                  "Cancel",
-                  style: TextStyle(
-                      fontWeight: FontWeight.bold,
-                      color: Colors.red
-                  ),
-                ),
-              ),
-              ElevatedButton(
-                  onPressed: () {
-                    setState(() {
-                      _itemsList[index].name = name;
-                      _itemsList[index].category = category;
-                      _itemsList[index].color = color;
-                      Navigator.pop(context);
-                    });
-                  },
-                  style: ButtonStyle(
-                    backgroundColor:
-                    MaterialStateProperty.all<Color>(Colors.green),
-                  ),
-                  child: const Text(
-                    "Edit Item",
-                    style: TextStyle(
-                        fontWeight: FontWeight.bold, color: Colors.red),
-                  ))
-            ],
-          );
-        });
+  void _navigateToHome() {
+    Future.delayed(Duration.zero, () {
+      Navigator.pushReplacementNamed(context, '/');
+    });
+  }
+
+  void _navigateToLogin() {
+    Future.delayed(Duration.zero, () {
+      Navigator.pushReplacementNamed(context, '/login');
+    });
+  }
+
+  void _navigateToRegister() {
+    Future.delayed(Duration.zero, () {
+      Navigator.pushReplacementNamed(context, '/register');
+    });
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text(
-          "201163",
-          style: TextStyle(fontWeight: FontWeight.bold),
+        title: widget.isLogin ? const Text("Најава") : const Text("Регистрирај се"),
+      ),
+      body: Padding(
+        padding: const EdgeInsets.all(30.0),
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            TextField(
+              controller: _emailController,
+              decoration: const InputDecoration(labelText: "Email"),
+            ),
+            TextField(
+              controller: _passwordController,
+              obscureText: true,
+              decoration: const InputDecoration(labelText: "Password"),
+            ),
+            const SizedBox(height: 20),
+            ElevatedButton(
+              onPressed: _authAction,
+              child: Text(widget.isLogin ? "Најави се" : "Регистрирај корисник"),
+            ),
+            if (!widget.isLogin)
+              TextButton(
+                onPressed: _navigateToLogin,
+                child: const Text('Веќе имате акаунт? Најави се'),
+              ),
+            if (widget.isLogin)
+              TextButton(
+                onPressed: _navigateToRegister,
+                child: const Text('Креирај акаунт'),
+              ),
+            TextButton(
+              onPressed: _navigateToHome,
+              child: const Text('Назад'),
+            ),
+          ],
         ),
-        backgroundColor: Colors.blue.shade400,
-      ),
-      body: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          const Padding(
-            padding: EdgeInsets.all(16.0),
-            child: Text(
-              'All items',
-              style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
-            ),
-          ),
-          Expanded(
-            child: ListView.builder(
-              itemCount: _itemsList.length,
-              itemBuilder: (context, index) {
-                return Card(
-                  color: Colors.white,
-                  child: ListTile(
-                    title: Text(
-                      _itemsList[index].name,
-                      style: const TextStyle(
-                          fontSize: 20, fontWeight: FontWeight.bold),
-                    ),
-                    subtitle: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          'Color: ${_itemsList[index].category}',
-                          style: const TextStyle(
-                              fontSize: 16, color: Colors.grey),
-                        ),
-                        const SizedBox(height: 4),
-                        Text(
-                          'Color: ${_itemsList[index].color}',
-                          style: const TextStyle(
-                              fontSize: 16, color: Colors.grey),
-                        ),
-                      ],
-                    ),
-                    contentPadding: const EdgeInsets.symmetric(
-                        horizontal: 16, vertical: 8),
-                    trailing: Row(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        IconButton(
-                          color: Colors.red,
-                          style: ButtonStyle(
-                            backgroundColor: MaterialStateProperty.all<Color>(
-                                Colors.green),
-                          ),
-                          icon: const Icon(Icons.delete_outline_sharp),
-                          onPressed: () {
-                            setState(() {
-                              _itemsList.removeAt(index);
-                            });
-                          },
-                        ),
-                        IconButton(
-                          color: Colors.red,
-                          icon: const Icon(Icons.edit),
-                          style: ButtonStyle(
-                            backgroundColor: MaterialStateProperty.all<Color>(
-                                Colors.green),
-                          ),
-                          onPressed: () {
-                            editItem(index);
-                          },
-                        ),
-                      ],
-                    ),
-                  ),
-                );
-              },
-            ),
-          ),
-        ],
-      ),
-      floatingActionButton: FloatingActionButton(
-        foregroundColor: Colors.white,
-        onPressed: addNewItem,
-        backgroundColor: Colors.blue.shade400,
-        child: const Icon(Icons.add_card),
       ),
     );
   }

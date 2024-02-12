@@ -1,8 +1,14 @@
-<manifest xmlns:android="http://schemas.android.com/apk/res/android">
+<manifest xmlns:android="http://schemas.android.com/apk/res/android"
+    package="com.example.your_app_package_name">
+    <!-- Add the internet permission here -->
+    <uses-permission android:name="android.permission.INTERNET"/>
+
     <application
         android:label="labaratoriska"
         android:name="${applicationName}"
         android:icon="@mipmap/ic_launcher">
+        <!-- Your activity definition and other configurations go here -->
+        <!-- Make sure to include the INTERNET permission -->
         <activity
             android:name=".MainActivity"
             android:exported="true"
@@ -16,9 +22,9 @@
                  while the Flutter UI initializes. After that, this theme continues
                  to determine the Window background behind the Flutter UI. -->
             <meta-data
-              android:name="io.flutter.embedding.android.NormalTheme"
-              android:resource="@style/NormalTheme"
-              />
+                android:name="io.flutter.embedding.android.NormalTheme"
+                android:resource="@style/NormalTheme"
+                />
             <intent-filter>
                 <action android:name="android.intent.action.MAIN"/>
                 <category android:name="android.intent.category.LAUNCHER"/>
